@@ -60,9 +60,11 @@ must be either :INPUT or :OUTPUT."))
          (ceiling (the fixnum bits) 8))))))
 
 (defun check-stream-element-type (stream context)
-  (let ((set (stream-element-type stream)))
-    (unless (subtypep set '(or signed-byte unsigned-byte))
-      (error "Invalid stream element type for ~S: ~S" context set))))
+  (or (and (sb-impl::fd-stream-p stream)
+           (sb-impl::fd-stream-bivalent-p stream))
+      (let ((set (stream-element-type stream)))
+        (unless (subtypep set '(or signed-byte unsigned-byte))
+          (error "Invalid stream element type for ~S: ~S" context set)))))
 
 ;;; WRITE-VECTOR-DATA
 
@@ -169,7 +171,7 @@ bounded by START and AND with raw data from STREAM.
 
 VECTOR must have ARRAY-ELEMENT-TYPE of DOUBLE-FLOAT, SINGLE-FLOAT,
 \(UNSIGNED-BYTE X), or \(SIGNED-BYTE X). Floating point values are read using
-the IEEE formats, and SIGNED-BYTE and UNSIGNED-BYTE valus are read as raw
+the IEEE formats, and SIGNED-BYTE and UNSIGNED-BYTE values are read as raw
 bytes using the native endianness of the host platform.
 
 Primary return value is the number of elements read.
