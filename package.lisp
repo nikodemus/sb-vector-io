@@ -16,6 +16,7 @@
 ;;;; TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 ;;;; SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-(defpackage :vector-io
+(defpackage :sb-vector-io
   (:use :cl)
+  (:nicknames :vector-io)
   (:export "WRITE-VECTOR-DATA" "READ-VECTOR-DATA"))

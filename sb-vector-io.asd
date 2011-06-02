@@ -17,6 +17,9 @@
 ;;;; SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 (defsystem :sb-vector-io
+  :author "Nikodemus Siivola <nikodemus@sb-studio.net>"
+  :licence "0-clause MIT"
+  :description "Raw vector IO for SBCL."
   :components
   ((:file "package")
    (:file "vector-io" :depends-on ("package"))))
