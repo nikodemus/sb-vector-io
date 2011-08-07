@@ -5,7 +5,7 @@
 ;;;; data on the platform. Endianness is unspecified, floating points use the
 ;;;; IEEE format.
 ;;;;
-;;;; By Nikodemus Siivola <nikodemus@random-state.net>, 2008.
+;;;; By Nikodemus Siivola <nikodemus@random-state.net>, 2008, 2011
 ;;;;
 ;;;; Permission is hereby granted, free of charge, to any person
 ;;;; obtaining a copy of this software and associated documentation files
@@ -25,7 +25,7 @@
 
 #-sbcl (error "Unsupported implementation.")
 
-(in-package :vector-io)
+(in-package :sb-vector-io)
 
 (defgeneric stream-fd (stream direction)
   (:documentation
