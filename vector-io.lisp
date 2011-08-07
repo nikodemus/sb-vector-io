@@ -53,6 +53,7 @@ must be either :INPUT or :OUTPUT."))
     (etypecase aet
       ((member double-float) 8)
       ((member single-float) 4)
+      ((member fixnum) #.sb-vm:n-word-bytes)
       (cons
        (let ((type (first aet))
              (bits (second aet)))
@@ -73,10 +74,12 @@ must be either :INPUT or :OUTPUT."))
    "Writes elements of the subsequence of VECTOR bounded by START and
 END to STREAM.
 
-VECTOR must have ARRAY-ELEMENT-TYPE of DOUBLE-FLOAT, SINGLE-FLOAT,
-\(UNSIGNED-BYTE X), or \(SIGNED-BYTE X). Floating point values are written
-using the IEEE formats, and SIGNED-BYTE and UNSIGNED-BYTE values are written
-as raw bytes using the native endianness of the host platform.
+VECTOR must have ARRAY-ELEMENT-TYPE of FIXNUM, DOUBLE-FLOAT,
+SINGLE-FLOAT, \(UNSIGNED-BYTE X), or \(SIGNED-BYTE X). Floating point
+values are written using the IEEE formats, and SIGNED-BYTE and
+UNSIGNED-BYTE values are written as raw bytes using the native
+endianness of the host platform. FIXNUMs are written in the
+implementation internal representation.
 
 STREAM must be a binary output stream.
 
@@ -84,10 +87,10 @@ Returns the number of elements written."))
 
 (defmethod write-vector-data ((vector vector) (stream sb-kernel:ansi-stream) &key (start 0) end)
   (check-stream-element-type stream 'write-vector-data)
-  ;; KLUDGE: SBCL normally buffers all output (to be fixed later), and since
-  ;; the raison d'etre for VECTOR-IO is efficient IO for large vectors of
-  ;; simple data, we are going to bypass buffering -- so the first thing to do
-  ;; is to flush any pending output.
+  ;; KLUDGE: SBCL normally buffers all output (to be fixed later), and
+  ;; since the raison d'etre for VECTOR-IO is efficient IO for large
+  ;; vectors of simple data, we are going to bypass buffering -- so
+  ;; the first thing to do is to flush any pending output.
   (finish-output stream)
   (sb-kernel:with-array-data ((data vector)
                               (data-start start)
@@ -170,9 +173,11 @@ Returns the number of elements written."))
 bounded by START and AND with raw data from STREAM.
 
 VECTOR must have ARRAY-ELEMENT-TYPE of DOUBLE-FLOAT, SINGLE-FLOAT,
-\(UNSIGNED-BYTE X), or \(SIGNED-BYTE X). Floating point values are read using
-the IEEE formats, and SIGNED-BYTE and UNSIGNED-BYTE values are read as raw
-bytes using the native endianness of the host platform.
+\(UNSIGNED-BYTE X), or \(SIGNED-BYTE X). Floating point values are
+read using the IEEE formats, and SIGNED-BYTE and UNSIGNED-BYTE values
+are read as raw bytes using the native endianness of the host
+platform. FIXNUMs are read in the implementation internal
+representation.
 
 Primary return value is the number of elements read.
 
