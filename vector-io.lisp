@@ -113,6 +113,11 @@ Returns the number of elements written."))
                   (decf byte-count wrote)
                   (incf byte-start wrote)
                   (go :write))
+                 ;; We don't have serve-event on Windows, so no way to deal
+                 ;; with incomplete writes, but as long as the underlying
+                 ;; handle is not asynchronous, unix-write should always
+                 ;; complete -- we hope!
+                 #-win32
                  ((eql errno sb-unix:ewouldblock)
                   ;; Blocking, must wait.
                   (wait-for-vector-write stream fd data data-start byte-count)
@@ -120,6 +125,7 @@ Returns the number of elements written."))
                  (t
                   (sb-impl::simple-stream-perror "Could't write to ~S" stream errno))))))))
 
+#-win32
 (defun wait-for-vector-write (stream fd data start bytes)
   ;; FIXME: this bypasses the normal FD-STREAM output queue, but that should
   ;; be fine assuming that no other fd-handler firing causes writes to the
