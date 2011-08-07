@@ -30,23 +30,44 @@
 (defgeneric stream-fd (stream direction)
   (:documentation
    "Returns the underlying file-descriptor of STREAM in DIRECTION. DIRECTION
-must be either :INPUT or :OUTPUT."))
+must be either :INPUT or :OUTPUT.")
 
-(defmethod stream-fd ((stream sb-sys:fd-stream) direction)
-  (declare (ignore direction))
-  (sb-sys:fd-stream-fd stream))
+  (:method ((stream sb-sys:fd-stream) direction)
+    (declare (ignore direction))
+    (sb-sys:fd-stream-fd stream))
 
-(defmethod stream-fd ((stream synonym-stream) direction)
-  (stream-fd (symbol-value (synonym-stream-symbol stream)) direction))
+  (:method ((stream synonym-stream) direction)
+    (stream-fd (symbol-value (synonym-stream-symbol stream)) direction))
 
-(defmethod stream-fd ((stream two-way-stream) direction)
-  (ecase direction
-    (:input
-     (stream-fd
-      (two-way-stream-input-stream stream) direction))
-    (:output
-     (stream-fd
-      (two-way-stream-output-stream stream) direction))))
+  (:method ((stream two-way-stream) direction)
+    (ecase direction
+      (:input
+       (stream-fd
+        (two-way-stream-input-stream stream) direction))
+      (:output
+       (stream-fd
+        (two-way-stream-output-stream stream) direction)))))
+
+(defgeneric stream-timeout (stream direction)
+  (:documentation
+   "Returns the underlying timeout of STREAM in DIRECTION. DIRECTION
+must be either :INPUT or :OUTPUT.")
+
+  (:method ((stream sb-sys:fd-stream) direction)
+    (declare (ignore direction))
+    (sb-impl::fd-stream-timeout stream))
+
+  (:method ((stream synonym-stream) direction)
+    (stream-timeout (symbol-value (synonym-stream-symbol stream)) direction))
+
+  (:method ((stream two-way-stream) direction)
+    (ecase direction
+      (:input
+       (stream-timeout
+        (two-way-stream-input-stream stream) direction))
+      (:output
+       (stream-timeout
+        (two-way-stream-output-stream stream) direction)))))
 
 (defun vector-element-bytes (vector)
   (let ((aet (array-element-type vector)))
@@ -119,28 +140,40 @@ Returns the number of elements written."))
                  ;; complete -- we hope!
                  #-win32
                  ((eql errno sb-unix:ewouldblock)
-                  ;; Blocking, must wait.
-                  (wait-for-vector-write stream fd data data-start byte-count)
+                  ;; Blocking, must wait or serve events.
+                  (if (sb-impl::fd-stream-serve-events stream)
+                      (wait-for-vector-write stream fd data
+                                             data-start byte-count)
+                      (if (sb-sys:wait-until-fd-usable
+                           fd :output (stream-timeout stream) nil)
+                          (go :write)
+                          (sb-impl::signal-timeout
+                           'sb-impl::io-timeout
+                           :stream stream
+                           :direction :output
+                           :seconds (stream-timeout stream))))
                   (return-from write-vector-data elt-count))
                  (t
-                  (sb-impl::simple-stream-perror "Could't write to ~S" stream errno))))))))
+                  (sb-impl::simple-stream-perror
+                   "Could't write to ~S" stream errno))))))))
 
 #-win32
 (defun wait-for-vector-write (stream fd data start bytes)
-  ;; FIXME: this bypasses the normal FD-STREAM output queue, but that should
-  ;; be fine assuming that no other fd-handler firing causes writes to the
-  ;; same file descriptor -- and since the stream should be flushed, this is
-  ;; the case under normal circumstances: the only exception is user added
-  ;; fd-handlers triggering complex activity.
+  ;; FIXME: this bypasses the normal FD-STREAM output queue, but that
+  ;; should be fine assuming that no other fd-handler firing causes
+  ;; writes to the same file descriptor -- and since the stream should
+  ;; be flushed, this is the case under normal circumstances: the only
+  ;; exception is user added fd-handlers triggering complex activity.
   ;;
-  ;; When this code is integrated to SBCL, the code path that now starts with
-  ;; BUFFER-OUTPUT should first try to write directly (assuming there is no
-  ;; queued output), and if it fails, be able to use the object being written
-  ;; directly instead of copying to a buffer. (Standard output functions which
-  ;; may return after output has been buffered must copy their output, but we
-  ;; can specify unspecified consequences for WRITE-VECTOR-DATA if a part of
-  ;; it that has been output is modified before the stream it was written to
-  ;; is flushed.)
+  ;; When this code is integrated to SBCL, the code path that now
+  ;; starts with BUFFER-OUTPUT should first try to write directly
+  ;; (assuming there is no queued output), and if it fails, be able to
+  ;; use the object being written directly instead of copying to a
+  ;; buffer. (Standard output functions which may return after output
+  ;; has been buffered must copy their output, but we can specify
+  ;; unspecified consequences for WRITE-VECTOR-DATA if a part of it
+  ;; that has been output is modified before the stream it was written
+  ;; to is flushed.)
   (let (handler)
     (setf handler
           (lambda (fd)
@@ -162,8 +195,10 @@ Returns the number of elements written."))
                      (let (continue)
                        (unwind-protect
                             (progn
-                              (with-simple-restart (continue "Keep trying to write.")
-                                (sb-impl::simple-stream-perror "Could't write to ~S" stream errno))
+                              (with-simple-restart (continue
+                                                    "Keep trying to write.")
+                                (sb-impl::simple-stream-perror
+                                 "Could't write to ~S" stream errno))
                               (setf continue t))
                          (unless continue
                            (when handler
