@@ -23,3 +23,15 @@
   :components
   ((:file "package")
    (:file "vector-io" :depends-on ("package"))))
+
+(defsystem :sb-vector-io-tests
+  :author "Nikodemus Siivola <nikodemus@sb-studio.net>"
+  :licence "0-clause MIT"
+  :description "Tests for SB-VECTOR-IO."
+  :depends-on (:sb-rt :sb-posix)
+  :components
+  ((:file "tests")))
+
+(defmethod perform ((op test-op) (system (eql (find-system :sb-vector-io))))
+  (load-system :sb-vector-io-tests)
+  (funcall (intern "RUN-TESTS" :sb-vector-io-tests)))
