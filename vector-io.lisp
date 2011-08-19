@@ -145,13 +145,13 @@ Returns the number of elements written."))
                       (wait-for-vector-write stream fd data
                                              data-start byte-count)
                       (if (sb-sys:wait-until-fd-usable
-                           fd :output (stream-timeout stream) nil)
+                           fd :output (stream-timeout stream :output) nil)
                           (go :write)
                           (sb-impl::signal-timeout
                            'sb-impl::io-timeout
                            :stream stream
                            :direction :output
-                           :seconds (stream-timeout stream))))
+                           :seconds (stream-timeout stream :output))))
                   (return-from write-vector-data elt-count))
                  (t
                   (sb-impl::simple-stream-perror
