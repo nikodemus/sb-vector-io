@@ -41,6 +41,7 @@
     (sb-vector-io:write-vector-data vector stream :start start :end end)))
 
 (define-compiler-macro write-vector-data (&whole form &rest args)
+  (declare (ignore args))
   (warn "Package VECTOR-IO is deprecated, use SB-VECTOR-IO instead.")
   form)
 
@@ -54,5 +55,6 @@
     (sb-vector-io:read-vector-data vector stream :start start :end end)))
 
 (define-compiler-macro read-vector-data (&whole form &rest args)
+  (declare (ignore args))
   (warn "Package VECTOR-IO is deprecated, use SB-VECTOR-IO instead.")
   form)
